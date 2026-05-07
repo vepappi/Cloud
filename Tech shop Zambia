@@ -1,0 +1,97 @@
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+products = [
+    {"id": 1, "name": "Gaming Laptop", "brand": "ASUS ROG", "price": 18500.00, "category": "Laptops", "stock": 15, "rating": 4.8},
+    {"id": 2, "name": "Wireless Mouse", "brand": "Logitech", "price": 750.00, "category": "Accessories", "stock": 50, "rating": 4.5},
+    {"id": 3, "name": "Mechanical Keyboard", "brand": "Corsair", "price": 2100.00, "category": "Accessories", "stock": 30, "rating": 4.7},
+    {"id": 4, "name": "27-inch Monitor", "brand": "Dell", "price": 4800.00, "category": "Displays", "stock": 12, "rating": 4.6},
+    {"id": 5, "name": "Noise Cancelling Headphones", "brand": "Sony", "price": 3200.00, "category": "Audio", "stock": 25, "rating": 4.9},
+    {"id": 6, "name": "External SSD 1TB", "brand": "Samsung", "price": 1450.00, "category": "Storage", "stock": 40, "rating": 4.4}
+]
+
+def find_product(product_id):
+    return next((product for product in products if product["id"] == product_id), None)
+
+@app.route('/products', methods=['GET'])
+def get_all_products():
+    return jsonify(products), 200
+
+@app.route('/products/<int:product_id>', methods=['GET'])
+def get_one_product(product_id):
+    product = find_product(product_id)
+    if not product:
+        return jsonify({"error": f"Product with id {product_id} not found"}), 404
+    return jsonify(product), 200
+
+@app.route('/products', methods=['POST'])
+def create_product():
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"error": "No JSON data provided"}), 400
+    if "name" not in data:
+        return jsonify({"error": "Product name is required"}), 400
+    if "price" not in data:
+        return jsonify({"error": "Product price is required"}), 400
+    
+    new_id = max([product["id"] for product in products]) + 1 if products else 1
+    
+    new_product = {
+        "id": new_id,
+        "name": data["name"],
+        "brand": data.get("brand", "Unknown"),
+        "price": float(data["price"]),
+        "category": data.get("category", "General"),
+        "stock": data.get("stock", 0),
+        "rating": data.get("rating", 0.0)
+    }
+    
+    products.append(new_product)
+    return jsonify(new_product), 201
+
+@app.route('/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    product = find_product(product_id)
+    if not product:
+        return jsonify({"error": f"Product with id {product_id} not found"}), 404
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON data provided"}), 400
+    
+    product["name"] = data.get("name", product["name"])
+    product["brand"] = data.get("brand", product["brand"])
+    product["price"] = data.get("price", product["price"])
+    product["category"] = data.get("category", product["category"])
+    product["stock"] = data.get("stock", product["stock"])
+    product["rating"] = data.get("rating", product["rating"])
+    
+    return jsonify(product), 200
+
+@app.route('/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    global products
+    product = find_product(product_id)
+    if not product:
+        return jsonify({"error": f"Product with id {product_id} not found"}), 404
+    
+    products = [product for product in products if product["id"] != product_id]
+    return jsonify({"message": f"Product {product_id} deleted successfully"}), 200
+
+if __name__ == '__main__':
+    print("\n" + "="*50)
+    print("TechShop Zambia Inventory API is running!")
+    print("Available endpoints:")
+    print("   GET    /products           - Fetch all products")
+    print("   GET    /products/{id}      - Fetch one product")
+    print("   POST   /products           - Add new product")
+    print("   PUT    /products/{id}      - Update product")
+    print("   DELETE /products/{id}      - Remove product")
+    print("="*50 + "\n")
+    print("CURRENT PRODUCTS IN STOCK (Zambian Kwacha):")
+    for product in products:
+        print(f"   [{product['id']}] {product['name']} - K{product['price']:,.2f} - Stock: {product['stock']}")
+    print("\n" + "="*50 + "\n")
+    app.run(debug=True, port=5000)
